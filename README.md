@@ -415,11 +415,11 @@ My interests include software development, AI automation, business systems, clou
 
 **Location:** Nairobi, Kenya 🇰🇪
 
-**GitHub:** Add profile URL
+**GitHub:** https://github.com/Kipmambet
 
-**LinkedIn:** Add verified profile URL
+**LinkedIn:** https://www.linkedin.com/in/dereklangat/
 
-**Email:** Add preferred public contact address
+**Email:** derricklangat10@gmail.com
 
 **Website:** https://lelaresidence.com (project website)
 
