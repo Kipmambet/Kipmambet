@@ -1,4 +1,4 @@
-# Hey, I'm Derrick Langat 👋
+# Hey, I'm Derrick 👋
 
 ### Software Developer · AI Automation · Business Systems & Web Applications
 
