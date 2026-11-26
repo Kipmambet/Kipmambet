@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nyumba — Rent Collection on Autopilot</title>
+<meta name="description" content="Nyumba automates rent collection, M-Pesa reconciliation, tenant communication and reporting for landlords and property managers.">
+<style>
+  :root{
+    --bg:#0b0f14; --bg2:#111821; --card:#151e29; --line:#233142;
+    --text:#e8eef5; --muted:#93a4b8; --brand:#2fd68a; --brand-ink:#04140c;
+    --accent:#ffc857; --danger:#ff6b6b; --radius:16px;
+    --shadow:0 20px 50px -20px rgba(0,0,0,.6);
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#f7f9fb; --bg2:#eef3f7; --card:#ffffff; --line:#dbe3ec;
+      --text:#0f1b2a; --muted:#56677b; --brand:#0f9d5f; --brand-ink:#ffffff;
+      --accent:#b7791f; --shadow:0 20px 50px -25px rgba(15,27,42,.25);
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#f7f9fb; --bg2:#eef3f7; --card:#ffffff; --line:#dbe3ec;
+    --text:#0f1b2a; --muted:#56677b; --brand:#0f9d5f; --brand-ink:#ffffff;
+    --accent:#b7791f; --shadow:0 20px 50px -25px rgba(15,27,42,.25);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,Inter,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:inherit}
+  .wrap{max-width:1140px;margin:0 auto;padding:0 20px}
+  h1,h2,h3{line-height:1.15;margin:0 0 .5em;letter-spacing:-.02em}
+  h1{font-size:clamp(2.2rem,5.5vw,4rem)}
+  h2{font-size:clamp(1.7rem,3.5vw,2.5rem)}
+  p{margin:0 0 1em;color:var(--muted)}
+  .btn{display:inline-flex;align-items:center;gap:.5em;border:0;border-radius:999px;padding:.85em 1.5em;font-weight:650;font-size:1rem;cursor:pointer;text-decoration:none;transition:transform .15s,box-shadow .15s,background .15s}
+  .btn:focus-visible,input:focus-visible,select:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  .btn-primary{background:var(--brand);color:var(--brand-ink)}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 25px -10px var(--brand)}
+  .btn-ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+  .btn-ghost:hover{border-color:var(--muted)}
+  .pill{display:inline-block;font-size:.8rem;font-weight:600;padding:.35em .9em;border-radius:999px;background:color-mix(in srgb,var(--brand) 15%,transparent);color:var(--brand);border:1px solid color-mix(in srgb,var(--brand) 35%,transparent)}
+
+  /* nav */
+  header{position:sticky;top:0;z-index:50;backdrop-filter:saturate(1.4) blur(12px);background:color-mix(in srgb,var(--bg) 80%,transparent);border-bottom:1px solid var(--line)}
+  nav{display:flex;align-items:center;justify-content:space-between;height:64px;gap:16px}
+  .logo{display:flex;align-items:center;gap:.55em;font-weight:800;font-size:1.2rem;text-decoration:none}
+  .logo svg{width:28px;height:28px}
+  .links{display:flex;gap:26px;font-size:.95rem}
+  .links a{text-decoration:none;color:var(--muted)}
+  .links a:hover{color:var(--text)}
+  .nav-right{display:flex;gap:10px;align-items:center}
+  .icon-btn{background:none;border:1px solid var(--line);color:var(--text);width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:1.05rem}
+  @media (max-width:820px){.links{display:none}.nav-right .btn{padding:.6em 1em;font-size:.9rem}}
+
+  /* hero */
+  .hero{padding:80px 0 60px;position:relative;overflow:hidden}
+  .hero::before{content:"";position:absolute;inset:-30% -10% auto auto;width:700px;height:700px;background:radial-gradient(circle,color-mix(in srgb,var(--brand) 22%,transparent),transparent 65%);pointer-events:none}
+  .hero-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center;position:relative}
+  .hero p.lead{font-size:1.2rem;max-width:34em}
+  .cta-row{display:flex;flex-wrap:wrap;gap:12px;margin:28px 0 18px}
+  .trust{font-size:.9rem;color:var(--muted)}
+  .trust b{color:var(--text)}
+  @media (max-width:900px){.hero-grid{grid-template-columns:1fr}.hero{padding-top:48px}}
+
+  /* dashboard mock */
+  .mock{background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:20px}
+  .mock-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+  .dots span{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--line);margin-right:6px}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+  .kpi{background:var(--bg2);border-radius:12px;padding:12px}
+  .kpi small{color:var(--muted);font-size:.72rem;display:block}
+  .kpi strong{font-size:1.15rem}
+  .bars{display:flex;align-items:flex-end;gap:8px;height:110px;padding:8px 4px;border-bottom:1px solid var(--line)}
+  .bars div{flex:1;background:linear-gradient(to top,var(--brand),color-mix(in srgb,var(--brand) 50%,transparent));border-radius:6px 6px 2px 2px;transform-origin:bottom;animation:grow .9s ease-out both}
+  @keyframes grow{from{transform:scaleY(0)}}
+  .feed{margin-top:12px;font-size:.85rem}
+  .feed div{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--line)}
+  .feed div:last-child{border:0}
+  .ok{color:var(--brand);font-weight:600}
+  .late{color:var(--accent);font-weight:600}
+
+  section{padding:80px 0}
+  .alt{background:var(--bg2)}
+  .center{text-align:center;max-width:720px;margin:0 auto 48px}
+
+  /* logos/stats */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:30px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .stat{text-align:center}
+  .stat strong{display:block;font-size:1.8rem}
+  .stat span{color:var(--muted);font-size:.9rem}
+  @media (max-width:700px){.stats{grid-template-columns:repeat(2,1fr)}}
+
+  /* features */
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  @media (max-width:900px){.grid3{grid-template-columns:1fr 1fr}}
+  @media (max-width:600px){.grid3{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:26px;transition:transform .2s,border-color .2s}
+  .card:hover{transform:translateY(-4px);border-color:color-mix(in srgb,var(--brand) 45%,var(--line))}
+  .card .ico{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:color-mix(in srgb,var(--brand) 15%,transparent);font-size:1.3rem;margin-bottom:14px}
+  .card h3{font-size:1.15rem}
+  .card p{margin:0;font-size:.95rem}
+
+  /* steps */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;counter-reset:s}
+  .step{position:relative;padding-left:56px}
+  .step::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:0;width:40px;height:40px;border-radius:50%;background:var(--brand);color:var(--brand-ink);display:grid;place-items:center;font-weight:800}
+  @media (max-width:800px){.steps{grid-template-columns:1fr}}
+
+  /* calculator */
+  .calc{display:grid;grid-template-columns:1fr 1fr;gap:28px;background:var(--card);border:1px solid var(--line);border-radius:22px;padding:32px;box-shadow:var(--shadow)}
+  @media (max-width:850px){.calc{grid-template-columns:1fr;padding:22px}}
+  label{display:block;font-weight:600;font-size:.92rem;margin-bottom:6px}
+  .field{margin-bottom:22px}
+  .field .row{display:flex;justify-content:space-between;align-items:baseline}
+  .field output{font-weight:700;color:var(--brand)}
+  input[type=range]{width:100%;accent-color:var(--brand)}
+  .result{background:var(--bg2);border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:14px}
+  .result .big{font-size:clamp(2rem,5vw,2.8rem);font-weight:800;color:var(--brand);line-height:1}
+  .result .line{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:10px;font-size:.95rem}
+  .result .line span:first-child{color:var(--muted)}
+
+  /* pricing */
+  .toggle{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px;margin-top:8px}
+  .toggle button{border:0;background:none;color:var(--muted);padding:.55em 1.2em;border-radius:999px;cursor:pointer;font-weight:600;font-size:.95rem}
+  .toggle button[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink)}
+  .price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;align-items:stretch}
+  @media (max-width:900px){.price-grid{grid-template-columns:1fr;max-width:460px;margin:0 auto}}
+  .plan{display:flex;flex-direction:column}
+  .plan.featured{border:2px solid var(--brand);position:relative}
+  .plan.featured::after{content:"Most popular";position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:var(--brand);color:var(--brand-ink);font-size:.75rem;font-weight:700;padding:.3em .9em;border-radius:999px}
+  .amount{font-size:2.4rem;font-weight:800;margin:.2em 0 0}
+  .amount small{font-size:1rem;color:var(--muted);font-weight:500}
+  .plan ul{list-style:none;padding:0;margin:18px 0 24px;flex:1}
+  .plan li{padding:7px 0 7px 28px;position:relative;font-size:.95rem}
+  .plan li::before{content:"✓";position:absolute;left:0;color:var(--brand);font-weight:800}
+  .plan .btn{justify-content:center}
+
+  /* testimonials */
+  blockquote{margin:0}
+  blockquote p{color:var(--text);font-size:1.02rem}
+  .who{display:flex;gap:12px;align-items:center;margin-top:14px}
+  .av{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:var(--brand-ink);background:var(--brand)}
+  .who small{color:var(--muted);display:block}
+  .note{font-size:.8rem;color:var(--muted);text-align:center;margin-top:18px}
+
+  /* faq */
+  details{border-bottom:1px solid var(--line);padding:18px 0}
+  summary{cursor:pointer;font-weight:650;font-size:1.05rem;list-style:none;display:flex;justify-content:space-between;gap:16px}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"+";font-size:1.4rem;line-height:1;color:var(--brand);transition:transform .2s}
+  details[open] summary::after{transform:rotate(45deg)}
+  details p{margin:12px 0 0}
+  .faq{max-width:780px;margin:0 auto}
+
+  /* signup */
+  .signup{background:linear-gradient(135deg,color-mix(in srgb,var(--brand) 25%,var(--card)),var(--card));border:1px solid var(--line);border-radius:24px;padding:48px;display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:center}
+  @media (max-width:850px){.signup{grid-template-columns:1fr;padding:28px}}
+  form .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:500px){form .two{grid-template-columns:1fr}}
+  input[type=text],input[type=email],input[type=tel],select{width:100%;padding:.85em 1em;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--text);font:inherit;margin-bottom:12px}
+  .err{color:var(--danger);font-size:.85rem;min-height:1.2em;margin:-4px 0 8px}
+  .success{display:none;background:var(--bg);border-radius:16px;padding:24px;text-align:center}
+  .success.show{display:block}
+
+  footer{padding:40px 0;border-top:1px solid var(--line);font-size:.9rem;color:var(--muted)}
+  .foot{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
+
+  .reveal{opacity:0;transform:translateY(18px);transition:opacity .6s,transform .6s}
+  .reveal.in{opacity:1;transform:none}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}.reveal{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <nav aria-label="Main">
+      <a href="#top" class="logo" aria-label="Nyumba home">
+        <svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect width="32" height="32" rx="9" fill="var(--brand)"/><path d="M8 16.5 16 9l8 7.5V24a1 1 0 0 1-1 1h-4.5v-5h-5v5H9a1 1 0 0 1-1-1v-7.5Z" fill="var(--brand-ink)"/></svg>
+        Nyumba
+      </a>
+      <div class="links">
+        <a href="#features">Features</a>
+        <a href="#calculator">Savings</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#faq">FAQ</a>
+      </div>
+      <div class="nav-right">
+        <button class="icon-btn" id="themeBtn" aria-label="Toggle colour theme">◐</button>
+        <a href="#signup" class="btn btn-primary">Start free</a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <!-- HERO -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="pill">M-Pesa · Bank · Card — reconciled automatically</span>
+        <h1>Collect every shilling of rent. <span style="color:var(--brand)">Without chasing anyone.</span></h1>
+        <p class="lead">Nyumba matches every payment to the right tenant, sends polite reminders before rent is late, and gives you a live view of your whole portfolio — from one building to five hundred.</p>
+        <div class="cta-row">
+          <a href="#signup" class="btn btn-primary">Start 30-day free trial →</a>
+          <a href="#calculator" class="btn btn-ghost">Calculate your savings</a>
+        </div>
+        <p class="trust">No card required · Set up in under an hour · <b>Cancel anytime</b></p>
+      </div>
+
+      <div class="mock" aria-label="Product preview">
+        <div class="mock-top">
+          <div class="dots"><span></span><span></span><span></span></div>
+          <small style="color:var(--muted)">November portfolio</small>
+        </div>
+        <div class="kpis">
+          <div class="kpi"><small>Collected</small><strong>KES 4.82M</strong></div>
+          <div class="kpi"><small>Occupancy</small><strong>96.4%</strong></div>
+          <div class="kpi"><small>Arrears</small><strong style="color:var(--accent)">2.1%</strong></div>
+        </div>
+        <div class="bars" aria-hidden="true">
+          <div style="height:55%"></div><div style="height:62%;animation-delay:.05s"></div><div style="height:58%;animation-delay:.1s"></div><div style="height:71%;animation-delay:.15s"></div><div style="height:76%;animation-delay:.2s"></div><div style="height:83%;animation-delay:.25s"></div><div style="height:88%;animation-delay:.3s"></div><div style="height:97%;animation-delay:.35s"></div>
+        </div>
+        <div class="feed">
+          <div><span>Unit B4 · M-Pesa QJK8…2X</span><span class="ok">KES 28,000 ✓</span></div>
+          <div><span>Unit A12 · Bank transfer</span><span class="ok">KES 45,000 ✓</span></div>
+          <div><span>Unit C7 · Reminder sent</span><span class="late">Due in 2 days</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="wrap">
+      <div class="stats reveal" style="margin-top:56px">
+        <div class="stat"><strong>&lt; 60 min</strong><span>Typical setup time</span></div>
+        <div class="stat"><strong>0</strong><span>Spreadsheets needed</span></div>
+        <div class="stat"><strong>24/7</strong><span>Tenant self-service portal</span></div>
+        <div class="stat"><strong>1-click</strong><span>Monthly owner reports</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="features" class="alt">
+    <div class="wrap">
+      <div class="center reveal">
+        <h2>Everything a landlord does on Sunday night, done for you</h2>
+        <p>Built for how property is actually run — Paybill numbers, shared WhatsApp groups, caretakers with cash books — and the mess that comes with it.</p>
+      </div>
+      <div class="grid3">
+        <div class="card reveal"><div class="ico">⚡</div><h3>Auto-reconciliation</h3><p>Each M-Pesa and bank payment is matched to the tenant and unit automatically, even when they type the wrong account number.</p></div>
+        <div class="card reveal"><div class="ico">🔔</div><h3>Smart reminders</h3><p>Friendly SMS and WhatsApp nudges 3 days before, on the day and after the due date — escalating only when needed.</p></div>
+        <div class="card reveal"><div class="ico">🧾</div><h3>Instant receipts</h3><p>Tenants get a branded digital receipt the moment payment lands. Disputes about "I already paid" disappear.</p></div>
+        <div class="card reveal"><div class="ico">🛠️</div><h3>Maintenance tickets</h3><p>Tenants report issues with photos; you assign the fundi, track cost and close the loop — all logged per unit.</p></div>
+        <div class="card reveal"><div class="ico">📊</div><h3>Owner reports</h3><p>Rent roll, arrears ageing, expenses and net income per property, exported to PDF or Excel in one click.</p></div>
+        <div class="card reveal"><div class="ico">🔐</div><h3>Roles &amp; audit trail</h3><p>Give caretakers, agents and accountants exactly the access they need. Every change is recorded.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW -->
+  <section>
+    <div class="wrap">
+      <div class="center reveal"><h2>Live in an afternoon</h2></div>
+      <div class="steps">
+        <div class="step reveal"><h3>Import your units</h3><p>Upload your existing spreadsheet or add buildings by hand. We map tenants, rents and deposits for you.</p></div>
+        <div class="step reveal"><h3>Connect your Paybill</h3><p>Link your M-Pesa Paybill or Till and bank account. Payments start flowing in and matching immediately.</p></div>
+        <div class="step reveal"><h3>Switch on autopilot</h3><p>Choose your reminder schedule and report recipients. Then get your Sunday evenings back.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CALCULATOR -->
+  <section id="calculator" class="alt">
+    <div class="wrap">
+      <div class="center reveal">
+        <h2>What is manual rent collection costing you?</h2>
+        <p>Move the sliders. The estimate uses conservative assumptions you can see below.</p>
+      </div>
+      <div class="calc reveal">
+        <div>
+          <div class="field">
+            <div class="row"><label for="units">Number of units</label><output id="unitsOut"></output></div>
+            <input type="range" id="units" min="5" max="1000" step="5" value="60">
+          </div>
+          <div class="field">
+            <div class="row"><label for="rent">Average monthly rent (KES)</label><output id="rentOut"></output></div>
+            <input type="range" id="rent" min="5000" max="150000" step="1000" value="25000">
+          </div>
+          <div class="field">
+            <div class="row"><label for="arrears">Rent currently paid late or lost</label><output id="arrearsOut"></output></div>
+            <input type="range" id="arrears" min="0" max="30" step="1" value="8">
+          </div>
+          <div class="field">
+            <div class="row"><label for="hours">Admin hours per month on rent</label><output id="hoursOut"></output></div>
+            <input type="range" id="hours" min="2" max="200" step="2" value="30">
+          </div>
+          <p style="font-size:.82rem">Assumptions: automation recovers 40% of late/lost rent, cuts admin time by 70%, and admin time is valued at KES 800/hour. Your results will vary.</p>
+        </div>
+        <div class="result" aria-live="polite">
+          <span style="color:var(--muted);font-weight:600">Estimated monthly benefit</span>
+          <div class="big" id="benefit">—</div>
+          <div class="line"><span>Recovered rent</span><span id="recovered"></span></div>
+          <div class="line"><span>Admin time saved</span><span id="timeSaved"></span></div>
+          <div class="line"><span>Nyumba plan cost</span><span id="planCost"></span></div>
+          <div class="line" style="border:0"><span><b style="color:var(--text)">Return on subscription</b></span><span id="roi" style="font-weight:800;color:var(--brand)"></span></div>
+          <a href="#signup" class="btn btn-primary" style="justify-content:center;margin-top:6px">Claim these savings</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section id="pricing">
+    <div class="wrap">
+      <div class="center reveal">
+        <h2>Simple pricing that pays for itself</h2>
+        <p>Priced per occupied unit. Vacant units are always free.</p>
+        <div class="toggle" role="group" aria-label="Billing period">
+          <button type="button" data-bill="monthly" aria-pressed="true">Monthly</button>
+          <button type="button" data-bill="yearly" aria-pressed="false">Yearly · save 20%</button>
+        </div>
+      </div>
+      <div class="price-grid">
+        <div class="card plan reveal">
+          <h3>Starter</h3><p>For individual landlords</p>
+          <div class="amount"><span data-price="150">KES 150</span> <small>/ unit / mo</small></div>
+          <ul><li>Up to 50 units</li><li>M-Pesa auto-reconciliation</li><li>SMS reminders &amp; receipts</li><li>Tenant portal</li><li>Monthly PDF report</li></ul>
+          <a href="#signup" class="btn btn-ghost" data-plan="Starter">Start free</a>
+        </div>
+        <div class="card plan featured reveal">
+          <h3>Growth</h3><p>For agents &amp; growing portfolios</p>
+          <div class="amount"><span data-price="120">KES 120</span> <small>/ unit / mo</small></div>
+          <ul><li>Unlimited units</li><li>Bank + M-Pesa + card</li><li>WhatsApp reminders</li><li>Maintenance tickets</li><li>Owner statements &amp; Excel export</li><li>Team roles &amp; audit log</li></ul>
+          <a href="#signup" class="btn btn-primary" data-plan="Growth">Start free</a>
+        </div>
+        <div class="card plan reveal">
+          <h3>Enterprise</h3><p>For large managers &amp; developers</p>
+          <div class="amount">Custom</div>
+          <ul><li>Volume pricing</li><li>Accounting integrations</li><li>API access</li><li>Dedicated onboarding</li><li>SLA &amp; priority support</li></ul>
+          <a href="#signup" class="btn btn-ghost" data-plan="Enterprise">Talk to sales</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIALS -->
+  <section class="alt">
+    <div class="wrap">
+      <div class="center reveal"><h2>What landlords tell us they want</h2></div>
+      <div class="grid3">
+        <div class="card reveal"><blockquote><p>"I just want to know who has paid without scrolling through 200 M-Pesa messages."</p><div class="who"><div class="av">L</div><div><b>Landlord</b><small>40 units, Kasarani</small></div></div></blockquote></div>
+        <div class="card reveal"><blockquote><p>"My owners want a statement on the 5th. Building it takes my team two full days every month."</p><div class="who"><div class="av">A</div><div><b>Agency manager</b><small>12 buildings, Westlands</small></div></div></blockquote></div>
+        <div class="card reveal"><blockquote><p>"Tenants say they paid, the caretaker says they didn't. I need one source of truth."</p><div class="who"><div class="av">D</div><div><b>Developer</b><small>3 estates, Kiambu</small></div></div></blockquote></div>
+      </div>
+      <p class="note">Representative problems from early customer interviews — replace with real, permissioned testimonials as you sign customers.</p>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq">
+    <div class="wrap">
+      <div class="center reveal"><h2>Questions</h2></div>
+      <div class="faq">
+        <details><summary>Do tenants need to download an app?</summary><p>No. Tenants keep paying through M-Pesa or their bank exactly as they do today. The tenant portal is a simple web link that works on any phone.</p></details>
+        <details><summary>Do you hold my rent money?</summary><p>Never. Payments go straight into your own Paybill, Till or bank account. Nyumba only reads the transaction data to reconcile it.</p></details>
+        <details><summary>What happens when a tenant uses the wrong account number?</summary><p>Our matching uses the phone number, amount, name and payment history to suggest the right unit. Anything uncertain lands in a short review queue — one tap to confirm.</p></details>
+        <details><summary>Can I import my existing records?</summary><p>Yes. Upload a spreadsheet of units, tenants, rents and balances and we will map the columns for you. Our team can also do it for you on Growth and Enterprise.</p></details>
+        <details><summary>What if I want to leave?</summary><p>Export all your data to Excel at any time. No contracts on monthly plans, no exit fees.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <!-- SIGNUP -->
+  <section id="signup">
+    <div class="wrap">
+      <div class="signup reveal">
+        <div>
+          <h2>Start your 30-day free trial</h2>
+          <p>Tell us a little about your portfolio and we'll set up your account and help import your units — free.</p>
+          <p style="color:var(--text)">✓ No card required<br>✓ Personal onboarding call<br>✓ Your data, always exportable</p>
+        </div>
+        <div>
+          <form id="leadForm" novalidate>
+            <div class="two">
+              <div><label for="name">Full name</label><input type="text" id="name" autocomplete="name" required></div>
+              <div><label for="phone">Phone</label><input type="tel" id="phone" autocomplete="tel" placeholder="07xx xxx xxx" required></div>
+            </div>
+            <label for="email">Email</label>
+            <input type="email" id="email" autocomplete="email" required>
+            <div class="two">
+              <div><label for="portfolio">Units managed</label>
+                <select id="portfolio"><option>1–20</option><option selected>21–100</option><option>101–500</option><option>500+</option></select></div>
+              <div><label for="plan">Plan</label>
+                <select id="plan"><option>Starter</option><option selected>Growth</option><option>Enterprise</option></select></div>
+            </div>
+            <div class="err" id="formErr" role="alert"></div>
+            <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center">Create my account</button>
+          </form>
+          <div class="success" id="success" role="status">
+            <div style="font-size:2.4rem">🎉</div>
+            <h3>You're on the list!</h3>
+            <p id="successMsg">We'll be in touch within one business day.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <span>© <span id="yr"></span> Nyumba · Nairobi, Kenya</span>
+    <span><a href="#features">Features</a> · <a href="#pricing">Pricing</a> · <a href="#faq">FAQ</a></span>
+  </div>
+</footer>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const fmt = n => "KES " + Math.round(n).toLocaleString("en-KE");
+  const store = {
+    get(k){ try { return localStorage.getItem(k); } catch { return null; } },
+    set(k,v){ try { localStorage.setItem(k,v); } catch {} }
+  };
+
+  $("#yr").textContent = new Date().getFullYear();
+
+  /* Theme toggle */
+  const root = document.documentElement;
+  const saved = store.get("nyumba-theme");
+  if (saved) root.dataset.theme = saved;
+  $("#themeBtn").addEventListener("click", () => {
+    const isDark = root.dataset.theme
+      ? root.dataset.theme === "dark"
+      : matchMedia("(prefers-color-scheme: dark)").matches;
+    root.dataset.theme = isDark ? "light" : "dark";
+    store.set("nyumba-theme", root.dataset.theme);
+  });
+
+  /* Pricing */
+  let billing = "monthly";
+  const unitPrice = base => billing === "yearly" ? base * 0.8 : base;
+  $$(".toggle button").forEach(b => b.addEventListener("click", () => {
+    billing = b.dataset.bill;
+    $$(".toggle button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    $$("[data-price]").forEach(el => el.textContent = fmt(unitPrice(+el.dataset.price)));
+    calc();
+  }));
+  $$("[data-plan]").forEach(a => a.addEventListener("click", () => { $("#plan").value = a.dataset.plan; }));
+
+  /* Savings calculator */
+  const ids = ["units","rent","arrears","hours"];
+  const el = Object.fromEntries(ids.map(i => [i, $("#" + i)]));
+  function calc(){
+    const u = +el.units.value, r = +el.rent.value, a = +el.arrears.value / 100, h = +el.hours.value;
+    $("#unitsOut").textContent = u.toLocaleString("en-KE");
+    $("#rentOut").textContent = fmt(r);
+    $("#arrearsOut").textContent = Math.round(a * 100) + "%";
+    $("#hoursOut").textContent = h + " h";
+    const recovered = u * r * a * 0.40;
+    const timeSaved = h * 0.70 * 800;
+    const perUnit = u > 50 ? 120 : 150;               // Growth above 50 units
+    const cost = u * unitPrice(perUnit);
+    const net = recovered + timeSaved - cost;
+    $("#recovered").textContent = fmt(recovered);
+    $("#timeSaved").textContent = fmt(timeSaved);
+    $("#planCost").textContent = "− " + fmt(cost);
+    $("#benefit").textContent = (net < 0 ? "− " : "") + fmt(Math.abs(net));
+    $("#roi").textContent = cost > 0 ? ((recovered + timeSaved) / cost).toFixed(1) + "×" : "—";
+  }
+  ids.forEach(i => el[i].addEventListener("input", calc));
+  calc();
+
+  /* Lead form */
+  $("#leadForm").addEventListener("submit", e => {
+    e.preventDefault();
+    const name = $("#name").value.trim(), email = $("#email").value.trim(), phone = $("#phone").value.replace(/\s+/g, "");
+    let err = "";
+    if (name.length < 2) err = "Please enter your name.";
+    else if (!/^\+?\d{9,13}$/.test(phone)) err = "Please enter a valid phone number.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) err = "Please enter a valid email address.";
+    $("#formErr").textContent = err;
+    if (err) return;
+    const lead = { name, email, phone, units: $("#portfolio").value, plan: $("#plan").value, at: new Date().toISOString() };
+    // TODO: send `lead` to your CRM / backend (e.g. fetch("/api/leads", {method:"POST", body: JSON.stringify(lead)})).
+    try { const all = JSON.parse(store.get("nyumba-leads") || "[]"); all.push(lead); store.set("nyumba-leads", JSON.stringify(all)); } catch {}
+    $("#leadForm").style.display = "none";
+    $("#successMsg").textContent = `Thanks, ${name.split(" ")[0]}! We'll call ${phone} within one business day to set up your ${lead.plan} trial.`;
+    $("#success").classList.add("show");
+  });
+
+  /* Reveal on scroll */
+  if ("IntersectionObserver" in window) {
+    const io = new IntersectionObserver(es => es.forEach(x => { if (x.isIntersecting) { x.target.classList.add("in"); io.unobserve(x.target); } }), { threshold: .12 });
+    $$(".reveal").forEach(n => io.observe(n));
+  } else $$(".reveal").forEach(n => n.classList.add("in"));
+})();
+</script>
+</body>
+</html>
