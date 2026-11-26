@@ -394,6 +394,8 @@
               <div><label for="plan">Plan</label>
                 <select id="plan"><option>Starter</option><option selected>Growth</option><option>Enterprise</option></select></div>
             </div>
+            <!-- Honeypot: hidden from people, bots fill it in and get ignored -->
+            <div style="position:absolute;left:-9999px" aria-hidden="true"><label for="website">Website</label><input type="text" id="website" tabindex="-1" autocomplete="off"></div>
             <div class="err" id="formErr" role="alert"></div>
             <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center">Create my account</button>
           </form>
@@ -475,8 +477,14 @@
   calc();
 
   /* Lead form */
-  $("#leadForm").addEventListener("submit", e => {
+  /* Lead form → Google Sheet (see apps-script/README.md for setup).
+     Paste your Apps Script web app URL (ends in /exec) between the quotes. */
+  const SHEET_ENDPOINT = "";
+
+  let sending = false;
+  $("#leadForm").addEventListener("submit", async e => {
     e.preventDefault();
+    if (sending) return;
     const name = $("#name").value.trim(), email = $("#email").value.trim(), phone = $("#phone").value.replace(/\s+/g, "");
     let err = "";
     if (name.length < 2) err = "Please enter your name.";
@@ -484,9 +492,27 @@
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) err = "Please enter a valid email address.";
     $("#formErr").textContent = err;
     if (err) return;
-    const lead = { name, email, phone, units: $("#portfolio").value, plan: $("#plan").value, at: new Date().toISOString() };
-    // TODO: send `lead` to your CRM / backend (e.g. fetch("/api/leads", {method:"POST", body: JSON.stringify(lead)})).
-    try { const all = JSON.parse(store.get("nyumba-leads") || "[]"); all.push(lead); store.set("nyumba-leads", JSON.stringify(all)); } catch {}
+
+    const lead = { name, email, phone, units: $("#portfolio").value, plan: $("#plan").value,
+                   page: location.href, at: new Date().toISOString(), website: $("#website").value };
+    const btn = $("#leadForm button[type=submit]"), label = btn.textContent;
+
+    if (SHEET_ENDPOINT) {
+      sending = true; btn.disabled = true; btn.textContent = "Sending…";
+      try {
+        // Form-encoded + no-cors = a "simple" request Apps Script accepts from any origin.
+        // The response is opaque, so a resolved promise means the request reached Google.
+        await fetch(SHEET_ENDPOINT, { method: "POST", mode: "no-cors", body: new URLSearchParams(lead) });
+      } catch {
+        $("#formErr").textContent = "We couldn't send that — please check your connection and try again.";
+        sending = false; btn.disabled = false; btn.textContent = label;
+        return;
+      }
+    } else {
+      console.warn("Nyumba: SHEET_ENDPOINT is not set — lead saved only in this browser.");
+      try { const all = JSON.parse(store.get("nyumba-leads") || "[]"); all.push(lead); store.set("nyumba-leads", JSON.stringify(all)); } catch {}
+    }
+
     $("#leadForm").style.display = "none";
     $("#successMsg").textContent = `Thanks, ${name.split(" ")[0]}! We'll call ${phone} within one business day to set up your ${lead.plan} trial.`;
     $("#success").classList.add("show");
